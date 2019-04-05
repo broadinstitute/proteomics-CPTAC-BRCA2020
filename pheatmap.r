@@ -1064,19 +1064,17 @@ pheatmap = function(mat, color = colorRampPalette(rev(brewer.pal(n = 7, name = "
         #save(tr, file='debug.RData')
         ## find legend
         #seekViewport(tr$name[grep('legend', tr$name)[2]])
-        seekViewport(tr$name[grep('legend', tr$name)[2]])
-        ##color.leg2 <- colorRampPalette( c('blue', 'grey', 'red'))(5)
-        color.leg2 <- color[c(1, 4, 6, 8, 12)]
-        names(color.leg2) <- c('Deletion', 'LOH', 'Neutral', 'Gain', 'Amplification')
-        for(i in 1:length(color.leg2)){
+        #color.leg2 <- color[c(1, 4, 6, 8, 12)]
+        #names(color.leg2) <- c('Deletion', 'LOH', 'Neutral', 'Gain', 'Amplification')
+        #for(i in 1:length(color.leg2)){
             ## ytmp = unit((i-1)*.1, 'npc')
-            ytmp = unit(i*12, "bigpts")
-            grid.rect(x=0, y=ytmp, width = unit(10, "bigpts"), height = unit(10, "bigpts"), hjust = 0,
-                      vjust = 0, gp = gpar(fill = color.leg2[i],  col = "#FFFFFF00"))
-            grid.text(names(color.leg2)[i], x=unit(14, "bigpts"), y=ytmp, hjust=0, vjust=-.2)
-        }
+        #    ytmp = unit(i*12, "bigpts")
+        #    grid.rect(x=0, y=ytmp, width = unit(10, "bigpts"), height = unit(10, "bigpts"), hjust = 0,
+        #              vjust = 0, gp = gpar(fill = color.leg2[i],  col = "#FFFFFF00"))
+        ##    grid.text(names(color.leg2)[i], x=unit(14, "bigpts"), y=ytmp, hjust=0, vjust=-.2)
+        #}
         ## header
-        grid.text('CNA', x=unit(0, "bigpts"), y=unit(i*12+12, "bigpts"), hjust=0, vjust=0,  gpar(fontsize=1.3*fontsize))
+        #grid.text('CNA', x=unit(0, "bigpts"), y=unit(i*12+12, "bigpts"), hjust=0, vjust=0,  gpar(fontsize=1.3*fontsize))
 
     }
 

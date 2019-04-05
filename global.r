@@ -13,24 +13,29 @@ library(scales)
 library(gtable)
 
 ## import the data
-load('data_bc2016.RData')
+load('data/data_bc2019.RData')
 
 ## global parameters
 GENESSTART <<- 'TP53 ERBB2 PIK3CA GATA3 ESR1 PGR'
 GENEMAX <<- 20
-#TITLESTRING <<- 'Supplementary information: <a href="https://www.nature.com/articles/nature18003" target-"_blank_">Mertins et al. 2016</a>'
-#TITLESTRING <<- 'Supplementary information to <i>Proteogenomics connects somatic mutations to signalling in breast cancer.</i><a href="https://www.nature.com/articles/nature18003" target-"_blank_"> (Mertins <i>et al</i>. 2016)</a>'
-#TITLESTRING <<- '<a href="https://www.nature.com/articles/nature18003" target="_blank_">Proteogenomics connects somatic mutations to signalling in breast cancer</a>. Mertins <i>et al.</i> (2016). Nature.<br><br>Supplementary information'
-TITLESTRING <<- '<font size="5" face="times"><i><b>"Proteogenomics connects somatic mutations to signalling in breast cancer"</b></i> (<a href="https://www.nature.com/articles/nature18003" target="_blank_">Mertins <i>et al.</i> Nature. 2016</a>)</font><br>'
+TITLESTRING <<- 'prospective BRCA v2.1 (beta)'
+GAPSIZEROW <<- 20
+FILENAMESTRING <<- 'CPTAC2.0_prospBRCA'
 
+cellwidth <<- 8
+cellheight <<- 10
 
-FILENAMESTRING <<- 'CPTAC2_BC2016'
-
-##library(pheatmap)
 library(RColorBrewer)
 library(gplots)
 library(WriteXLS)
 library(grid)
+
+#anno.class <- 'PAM50'
+#anno.class <- 'NMF.consensus'
+
+anno.all <- c('PAM50', 'NMF.consensus', 'ER', 'PR', 'HER2', 'ERBB2.CNA', 'HER2pos.HER2amp', 'HER2pam50.HER2amp', 'TP53', 'PIK3CA')
+names(anno.all) <- c('PAM50', 'NMF.cluster', 'ER.Status', 'PR.Status', 'HER2.Status', 'ERBB2.CNA', 'HER2pos.HER2amp', 'HER2pam50.HER2amp', 'TP53.mut', 'PIK3CA.mut')
+
 
 ##################################################################
 ## function to extract gene names from a string of
@@ -63,40 +68,57 @@ extractGenes <- function(genes.char){
 ##################################################################
 ## function to dynamically determine the height (in px) of the heatmap
 ## depending on the number of genes
-dynamicHeightHM <- function(n){
-    if( n < 5)
-        height=500
-    if( n >= 5 & n < 10)
-        height=500
-    if( n >= 10)
-        height=500+n*20
-    return(height)
+dynamicHeightHM <- function(n.entries, n.genes){
+  
+  height = (n.entries+2)*11 + (n.genes-1)*GAPSIZEROW + 140
+  
+  return(height)
+}
+
+
+#######################################################
+## find all entries with associated gene name in
+## the dataset. returns vector of indices.
+findGenesInDataset <- function(gene){
+  
+  ## remove spaces
+  #gene <- gsub(' ', '', gene )
+  
+  ## reverse the order
+  #gene <- gene[length(gene):1]
+  
+  ## make unique
+  #gene <- unique(gene)
+  gene <- extractGenes(gene)
+  
+  ## check whether the genes are present in the dataset
+  gene.idx <-  grep( paste(paste('^', gene,'$', sep=''), collapse='|'), row.anno[, 'geneSymbol'] )
+  if( length(gene.idx) == 0 ){
+    stop('None of the gene ids you have entered could be found in the dataset!\n')
+  }
+    return(gene.idx)
 }
 
 #################################################################
 ## draw the actual heatmap
 ##
 #################################################################
-makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=F, ...){
+makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=F, anno.class='PAM50', sort.dir, ...){
 
     min.val=-3
     max.val=3
     n.bins=12
 
-    ## remove spaces
-    gene <- gsub(' ', '', gene )
-
-    ## reverse the order
-    gene <- gene[length(gene):1]
-
-    ## make unique
-    gene <- unique(gene)
-
-    ## check whether the genes are present in the dataset
-    gene.idx <-  grep( paste(paste('^', gene,'$', sep=''), collapse='|'), row.anno[, 'Gene name'] )
-    if( length(gene.idx) == 0 ){
-        stop('None of the gene ids you have entered could be found in the dataset!\n')
-    }
+    if(anno.class == 'NMF') anno.class <- 'NMF.consensus'
+    
+    ## ################################################
+    ## reorder to PAM50
+    ord.idx <- order(column.anno[, anno.class], decreasing = ifelse(sort.dir == 'descending', T, F))
+    column.anno <- column.anno[ord.idx,]
+    expr <- expr[, ord.idx]
+    
+   
+    gene.idx <- findGenesInDataset(gene) 
     #################################
     ## extract sample ids
     sampleIDs <- colnames(expr)
@@ -105,24 +127,46 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
     ## extract genes of interest
     expr.select <- expr[gene.idx, ]
     row.anno.select <- row.anno[gene.idx, ]
-
+    
+    ## order
+    
     #####################################################
     ## labels for the rows in the heatmap
-    featureIDs.anno.select <- paste(row.anno.select[ , 'Gene name'],  gsub('6-RPPA_pSTY', 'RPPA pSTY',  gsub('5-RPPA_prot', 'RPPA Protein',  gsub( '4_pSTY', 'MS pSTY', gsub('3_Protein', 'MS Protein', gsub('2_RNAseq', 'RNA-Seq', gsub('1_CNA', 'CNA', row.anno.select[ , 'Data type'])) )))))
+    featureIDs.anno.select <- paste(row.anno.select[ , 'geneSymbol'],
+                                    gsub( '5_acK', 'acK',
+                                    gsub( '4_pSTY', 'pSTY', 
+                                          gsub('3_Protein', 'Protein', 
+                                               gsub('2_RNAseq', 'RNA-Seq', 
+                                                    gsub('1_CNA', 'CNA', row.anno.select[ , 'DataType'])
+                                                    ) 
+                                               )
+                                          )
+                                    )
+                                    )
 
     #####################################################
     ## add phosphosite annotation
     #####################################################
     ## RPPA
-    rppa.psty.idx <- grep('RPPA pSTY', featureIDs.anno.select)
-    if(length(rppa.psty.idx)>0){
-        featureIDs.anno.select[ rppa.psty.idx ] <- paste( sub(' pSTY', '', featureIDs.anno.select[ rppa.psty.idx ]), sub('.*_(.*?)\\..*', '\\1', row.anno.select[ rppa.psty.idx, 'ID2']))
-    }
+    #rppa.psty.idx <- grep('RPPA pSTY', featureIDs.anno.select)
+    #if(length(rppa.psty.idx)>0){
+    #    featureIDs.anno.select[ rppa.psty.idx ] <- paste( sub(' pSTY', '', featureIDs.anno.select[ rppa.psty.idx ]), sub('.*_(.*?)\\..*', '\\1', row.anno.select[ rppa.psty.idx, 'ID2']))
+    #}
     ## MS
-    ms.psty.idx <- grep('MS pSTY', featureIDs.anno.select)
+    ms.psty.idx <- grep('pSTY', featureIDs.anno.select)
     if(length(ms.psty.idx)>0){
-        featureIDs.anno.select[ ms.psty.idx ] <- paste( sub(' pSTY', '', featureIDs.anno.select[ ms.psty.idx ]), paste('p', sub('.*_([S|T|Y][0-9]*)[s|t|y].*', '\\1', row.anno.select[ ms.psty.idx, 'ID2']), sep='') )
+        featureIDs.anno.select[ ms.psty.idx ] <- paste( sub('pSTY', '', 
+                                                            featureIDs.anno.select[ ms.psty.idx ]), 
+                                                        paste('p', sub('.*_([S|T|Y][0-9]*)[s|t|y].*', '\\1', row.anno.select[ ms.psty.idx, 'ID']), sep=''), sep='' )
     }
+    ms.ack.idx <- grep('acK', featureIDs.anno.select)
+    if(length(ms.ack.idx)>0){
+      featureIDs.anno.select[ ms.ack.idx ] <- paste( sub('acK', '', 
+                                                         featureIDs.anno.select[ ms.ack.idx ]), 
+                                                     paste('ac', sub('.*_([K][0-9]*)[k].*', '\\1', row.anno.select[ ms.ack.idx, 'ID']), sep=''), sep='' )
+    }
+    
+    
 
     #################################
     ## apply zscore
@@ -145,34 +189,34 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
 
     ##############################
     ## column annotation
-    column.anno.fig <- data.frame(
-        PAM50=as.character(column.anno[c('PAM50'), ]),
-        ER.Status=as.character(column.anno[c('ER.Status'), ]),
-        PR.Status=as.character(column.anno[c('PR.Status'), ]),
-        HER2.Status=as.character(column.anno[c('HER2.Status'), ])                          )
-    rownames(column.anno.fig) <- colnames(column.anno)
-    column.anno.fig <- column.anno.fig[, c('HER2.Status', 'PR.Status', 'ER.Status', 'PAM50')]
+    #column.anno.fig <- column.anno[, c('PAM50', 'ER', 'PR', 'HER2')]
+    column.anno.fig <- column.anno[, anno.all]
+    colnames(column.anno.fig) <- names(anno.all)
 
     ##############################
     ## colors for column annotation
     column.anno.col <- list(
         PAM50=c(Basal='red', Her2='violet', LumA='blue', LumB='cyan', Normal='grey'),
-        ER.Status=c(Positive='black', Negative='white', Normal='grey'),
-        PR.Status=c(Positive='black', Negative='white', Normal='grey'),
-        HER2.Status=c(Positive='black', Negative='white', Normal='grey',  Equivocal='grey90')
+        ER.Status=c(positive='black', negative='white', unknown='grey'),
+        PR.Status=c(positive='black', negative='white', unknown='grey'),
+        HER2.Status=c(positive='black', negative='white', unknown='grey'),
+        NMF.cluster=c(C1='violet', C2='cyan', C3='yellow', C4='red'),
+        TP53.mut=c(mutated='darkblue', unmutated='white'),
+        PIK3CA.mut=c(mutated='darkblue', unmutated='white')
+        
     )
 
     ################################
     ## gaps
     ################################
     ## only possible because matrix is ordered according to PAM50
-    gaps.column=cumsum(c(  table(column.anno.fig$PAM50) ))
+    #gaps.column=cumsum(c(  table(column.anno.fig$PAM50) ))
+    gaps.column=cumsum(c(  table(column.anno[, anno.class]) ))
     gaps.row=cumsum(table(sub(' .*', '', featureIDs.anno.select)))
 
 
     ################################
     ## colors misc
-
     color.breaks = seq(min.val, max.val, length.out=n.bins)
     color.hm =  colorRampPalette( c('blue', 'grey', 'red'))(length(color.breaks))
     color.border = 'white'
@@ -184,11 +228,10 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
 
     ###############################
     ## heatmap
-    cellwidth=10
-    cellheight=10
+    
     pheatmap(expr.select.zscore, cluster_row=F, cluster_col=F,  annotation_col=column.anno.fig, annotation_colors=column.anno.col,  scale = "none", labels_row=featureIDs.anno.select, border_color=color.border, gaps_col=gaps.column, gaps_row=gaps.row, color=color.hm, filename=filename, cellwidth=cellwidth, cellheight=cellheight, labels_col=sampleIDs, breaks=color.breaks, legend_breaks=legend_breaks, legend_labels=legend_labels, na_col='white',...)
 
-
+   # save(featureIDs.anno.select, file = 'debug.RData')
     #########################################################################################
     ##
     ## - return part of table that is shown in the heatmap and that can be downloaded
@@ -204,7 +247,7 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
     }
     ## add row annotation
     mat.row <- as.data.frame( cbind( row.anno[gene.idx, ], expr.select, deparse.level=0 ), stringsAsFactors=F )
-    rownames(mat.row) <- featureIDs.anno.select
+    rownames(mat.row) <- make.names(featureIDs.anno.select, unique = T)
 
     ## column annotation
     mat.col <- as.data.frame( cbind(matrix('', nrow=ncol(column.anno.fig), ncol=ncol(row.anno)), t(column.anno.fig), deparse.level=0), stringsAsFactors=F)

@@ -31,11 +31,12 @@ shinyServer( function(input, output, session) {
         genes.vec <- extractGenes( input$genes )
         if(length(genes.vec)==0) return()
 
-        hm=makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=as.logical(input$zscore))
+        hm=makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=as.logical(input$zscore), anno.class=input$sort.after, sort.dir=input$sort.dir)
         global$expr.select <- hm
     },
     width = function(){ width=1200},
-    height= function(){ height=dynamicHeightHM(length( global$genes.input ))}
+    #height= function(){ height=dynamicHeightHM(length( global$genes.input ))}
+    height= function(){height=dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes )) ), length(unique(extractGenes( input$genes ))) )}
     )
 
     #############################
