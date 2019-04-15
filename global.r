@@ -1,34 +1,40 @@
 #################################################################
 ## Filename: global.r
-## Created: February 10, 2016
+## Created: April 3, 2019
 ## Author(s): Karsten Krug
-## Purpose: Shiny-app to visualize data from CPTAC2 Breast
-##          Cancer dataset (Mertins et al. 2016)
+## Purpose: Shiny-app to visualize data from CPTAC2.0 prospective Breast
+##          Cancer cohort
 ## This file imports the underlying data and contains global functions
 ## and variables used by 'ui.R' and 'server.R'
 #################################################################
 
 source('pheatmap.r')
-library(scales)
-library(gtable)
+library(pacman)
+p_load(scales)
+p_load(gtable)
 
 ## import the data
 load('data/data_bc2019.RData')
 
 ## global parameters
-GENESSTART <<- 'TP53 ERBB2 PIK3CA GATA3 ESR1 PGR'
+GENE.COLUMN <<- 'geneSymbol' 
+DATATYPE.COLUMN <<- 'DataType'
+
+GENESSTART <<- c('TP53', 'ERBB2', 'PIK3CA', 'GATA3', 'ESR1', 'PGR')
+#GENESSTART <<- 'TP53'
 GENEMAX <<- 20
 TITLESTRING <<- 'prospective BRCA v2.1 (beta)'
+WINDOWTITLE <<- 'prospBRCA v2.1'
 GAPSIZEROW <<- 20
 FILENAMESTRING <<- 'CPTAC2.0_prospBRCA'
 
 cellwidth <<- 8
 cellheight <<- 10
 
-library(RColorBrewer)
-library(gplots)
-library(WriteXLS)
-library(grid)
+p_load(RColorBrewer)
+p_load(gplots)
+p_load(WriteXLS)
+p_load(grid)
 
 #anno.class <- 'PAM50'
 #anno.class <- 'NMF.consensus'
@@ -36,6 +42,17 @@ library(grid)
 anno.all <- c('PAM50', 'NMF.consensus', 'ER', 'PR', 'HER2', 'ERBB2.CNA', 'HER2pos.HER2amp', 'HER2pam50.HER2amp', 'TP53', 'PIK3CA')
 names(anno.all) <- c('PAM50', 'NMF.cluster', 'ER.Status', 'PR.Status', 'HER2.Status', 'ERBB2.CNA', 'HER2pos.HER2amp', 'HER2pam50.HER2amp', 'TP53.mut', 'PIK3CA.mut')
 
+p_load(bcrypt)
+
+##################################################################
+## 21060613 bcrypt
+authenticateUser <- function(passphrase){
+  if(nchar(as.character(passphrase)) > 0){
+    return(checkpw(as.character(passphrase), "$2a$12$XXsIDMNZMaOgRcaq8JX8muN3gsG93YGltGcqfiqkGGgDkJKV4cwri"))
+  } else {
+    return(FALSE)
+  }
+}
 
 ##################################################################
 ## function to extract gene names from a string of
@@ -44,6 +61,9 @@ extractGenes <- function(genes.char){
 
     gene.max=GENEMAX
 
+    #cat('TEST:',genes.char, '\n')
+    if(is.null(genes.char))
+      return(NULL)
     if( nchar(genes.char) == 0 ){
         return(NULL)
     }
@@ -79,31 +99,87 @@ dynamicHeightHM <- function(n.entries, n.genes){
 #######################################################
 ## find all entries with associated gene name in
 ## the dataset. returns vector of indices.
-findGenesInDataset <- function(gene){
+findGenesInDataset <- function(gene, show.sites){
   
   ## remove spaces
-  #gene <- gsub(' ', '', gene )
+  gene <- gsub(' ', '', gene )
+  gene <- unique(gene)
+  ## remove emtpy strings
+  gene.nchar=which(nchar(gene) == 0)
+  if(length(gene.nchar) > 0)
+    gene <- gene[-gene.nchar]
   
-  ## reverse the order
-  #gene <- gene[length(gene):1]
+  if(length(gene) == 0) return()
   
-  ## make unique
-  #gene <- unique(gene)
-  gene <- extractGenes(gene)
+  ##cat('Length:', length(gene), '\n')
+  ##cat('genes:', gene, '\n')
   
   ## check whether the genes are present in the dataset
-  gene.idx <-  grep( paste(paste('^', gene,'$', sep=''), collapse='|'), row.anno[, 'geneSymbol'] )
+  gene.idx <- grep( paste(paste('(^|,)', gene, '($|,)', sep=''), collapse='|'), gsub(' ', '', row.anno[, GENE.COLUMN]) )
   if( length(gene.idx) == 0 ){
     stop('None of the gene ids you have entered could be found in the dataset!\n')
   }
-    return(gene.idx)
+  ##cat('gene idx:', gene.idx, '\n')
+  
+  #cat('Check', max(gene.idx),' | ', nrow(row.anno), ' | ', nrow(tab.expr.all),'\n')
+  
+  ## use row names
+  gene.idx <- rownames(tab.expr.all)[gene.idx]
+  #gene.idx <- row.anno[gene.idx, GENE.COLUMN]
+  
+ # cat('gene idx2:', gene.idx, '\n')
+  
+  #View(head(tab.expr.all))
+  #cat('Check', sum(gene.idx) %in% 1:nrow(tab.expr.all), '\n')
+  
+  ## exract data and remove empty rows
+  data.tmp <- tab.expr.all[gene.idx, ]
+  row.anno.tmp <- row.anno[gene.idx, ]
+  ##cat('SUCCESS\n')
+  
+  ## remove empty rows
+  #rm.idx <- apply( data.tmp, 1, function(x) ifelse( sum(is.na(x) )/length(x) == 1, 1, 0 ))
+  #if(sum(rm.idx) > 0)
+  #  gene.idx <- gene.idx[-which(rm.idx == 1)]
+  
+  ## update row annotation
+  #row.anno.tmp <- row.anno[gene.idx, ]
+  
+  ## update data
+  #data.tmp <- data.tmp[gene.idx, ]
+  
+  ## most variable site
+  if(show.sites=='most variable'){
+    
+    ## extract MS phospho
+    vm.idx <- grep('pSTY|acK', row.anno.tmp[, DATATYPE.COLUMN])
+    if( length(vm.idx) > 0 ){
+      
+      vm.sd <- apply(data.tmp[ vm.idx, ], 1, sd, na.rm=T)
+      
+      rm.idx <- tapply(vm.sd, row.anno.tmp[vm.idx, GENE.COLUMN],  function(x) names(x)[which.max(x)])
+      rm.idx <- setdiff( names(vm.sd), unlist(rm.idx) )
+      
+      gene.idx <- setdiff(gene.idx, rm.idx)
+      
+      data.tmp <- data.tmp[gene.idx, ]
+      row.anno.tmp <- row.anno.tmp[gene.idx, ]
+      
+    }
+  }
+
+  return(gene.idx)
 }
+
 
 #################################################################
 ## draw the actual heatmap
 ##
 #################################################################
-makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=F, anno.class='PAM50', sort.dir, ...){
+makeHM <- function(gene, filename=NA, expr=tab.expr.all, 
+                   column.anno=column.anno, row.anno=row.anno, zscore="none", 
+                   anno.class='PAM50', sort.dir, 
+                   show.sites='all', ...){
 
     min.val=-3
     max.val=3
@@ -112,13 +188,16 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
     if(anno.class == 'NMF') anno.class <- 'NMF.consensus'
     
     ## ################################################
-    ## reorder to PAM50
-    ord.idx <- order(column.anno[, anno.class], decreasing = ifelse(sort.dir == 'descending', T, F))
+    ## reorder
+    #ord.idx <- order(column.anno[, anno.class], decreasing = ifelse(sort.dir == 'descending', T, F))
+    ord.idx <- with(column.anno, order( eval(parse( text=anno.class ))))
     column.anno <- column.anno[ord.idx,]
     expr <- expr[, ord.idx]
     
    
-    gene.idx <- findGenesInDataset(gene) 
+    gene.idx <- findGenesInDataset(gene, show.sites) 
+    
+    
     #################################
     ## extract sample ids
     sampleIDs <- colnames(expr)
@@ -172,7 +251,7 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
     ## apply zscore
     rownames(expr.select) <- featureIDs.anno.select
 
-    if(zscore){
+    if(zscore == "row"){
         ## exclude CNA data from Z-scoreing
         expr.select.zscore.tmp <- lapply( rownames(expr.select), function(xx){x=expr.select[xx,];
             if( length(grep( 'CNA', xx)) == 0)return((x-mean(x, na.rm=T))/sd(x, na.rm=T));
@@ -202,7 +281,8 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
         HER2.Status=c(positive='black', negative='white', unknown='grey'),
         NMF.cluster=c(C1='violet', C2='cyan', C3='yellow', C4='red'),
         TP53.mut=c(mutated='darkblue', unmutated='white'),
-        PIK3CA.mut=c(mutated='darkblue', unmutated='white')
+        PIK3CA.mut=c(mutated='darkblue', unmutated='white'),
+        ERBB2.CNA=c('0'='white', '1'='darkgreen')
         
     )
 
@@ -211,7 +291,10 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all, column.anno=column.anno
     ################################
     ## only possible because matrix is ordered according to PAM50
     #gaps.column=cumsum(c(  table(column.anno.fig$PAM50) ))
-    gaps.column=cumsum(c(  table(column.anno[, anno.class]) ))
+    if(sort.dir == 'descending')
+      gaps.column=cumsum(c( rev(table(column.anno[, anno.class])) ))
+    if(sort.dir == 'ascending')
+      gaps.column=cumsum(c(  table(column.anno[, anno.class]) ))
     gaps.row=cumsum(table(sub(' .*', '', featureIDs.anno.select)))
 
 

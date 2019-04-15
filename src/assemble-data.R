@@ -73,6 +73,8 @@ rownames(cdesc) <- cdesc$Sample.ID
 column.anno <- cdesc[samp.common, ]
 row.anno <- rdesc
 tab.expr.all <- Reduce(f=rbind, gct.expr)
+rownames(tab.expr.all) <- make.unique(rownames(tab.expr.all)) 
+rownames(row.anno) <- rownames(tab.expr.all)
 
 ## reorder to PAM50
 ord.idx <- order(column.anno$PAM50)
