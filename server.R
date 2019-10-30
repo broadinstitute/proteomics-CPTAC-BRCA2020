@@ -1,11 +1,10 @@
-#################################################################
+###########################################################################
 ## Filename: server.R
-## Created: April 3, 2019
+## Created: Oct 24, 2019
 ## Author(s): Karsten Krug
-## Purpose: Shiny-app to visualize data from CPTAC2.0 prospective Breast
-##          Cancer cohort
+## Purpose: Shiny-app to visualize data from CPTAC LUAD discovery cohort
 ## This defines the server logic of the Shiny-app.
-#################################################################
+##########################################################################
 library(shiny)
 
 
@@ -15,8 +14,12 @@ library(shiny)
 shinyServer( function(input, output, session) {
 
     global <- reactiveValues(
-      auth=T,
+      zscore='row',
+      sort.dir='ascending',
+      auth=F,
+      init=T,
       all.genes=unique(row.anno[, GENE.COLUMN])
+      
     )
 
     ##############################
@@ -25,8 +28,9 @@ shinyServer( function(input, output, session) {
       
       if(global$auth) return()
       list(
-        passwordInput('passphrase',label='Enter passphrase', width=120),
-        actionButton('authbutton', 'GO')
+        passwordInput('passphrase',label='Enter password', width=120, placeholder = 'Password'),
+        #passwordInput('authbutton',label='Enter password', width=120, placeholder = 'Password')
+        actionButton('authbutton', 'GO', )
       )
     })
     
@@ -34,54 +38,72 @@ shinyServer( function(input, output, session) {
     ## check passphrase
     observeEvent(input$authbutton, {
       global$auth <- authenticateUser(input$passphrase)
+      global$init <- F
     })
-    
+    # 
+    # observeEvent(input$zscore, {
+    #   global$score <- input$zscore
+    # })
+    # 
     ##############################
     ## ui
     ##############################
     output$ui.input <- renderUI({
       
-      if(!global$auth) return()
-      #if(is.null(input$genes)) return()
+      if(global$init) return()
+      validate(need(expr=(global$auth), message=HTML('wrong password!'), label = 'authenticate'))
         
       list(
         ## text input
-        #textInput('genes', label=paste('Paste a list of gene names (max. ', GENEMAX,')', sep=''), value=GENESSTART),
         selectizeInput('genes', label=paste('Enter your genes of interest (max. ', GENEMAX,')', sep=''), 
-                       choices=global$all.genes,selected=GENESSTART, multiple=T),
+                       choices=global$all.genes, selected=GENESSTART, multiple=T),
         
         HTML('<br><br>'),
 
         fluidRow(
-          ##column(2, submitButton('GO')),
-          column(3, radioButtons('zscore', label='Z-score', choices=c('row', 'none'), selected='none')),
-          column(3, radioButtons('allsites', label='pSTY sites', choices=c('most variable', 'all'), selected='most variable')),
-          column(3, textInput('min.val', label='min', value=-3, width='80%')),
-          column(3, textInput('max.val', label='max', value=3, width='80%'))
+          column(3, radioButtons('zscore', label='Z-score', choices=c('row', 'none'), selected='row')),
+         # column(3),
+          column(3, radioButtons('allsites', label='phospho/acetyl sites', choices=c('most variable', 'all'), selected='most variable')),
+          column(3, textInput('min.val', label='min', value=-2, width='80%')),
+          column(3, textInput('max.val', label='max', value=2, width='80%'))
         ),
         fluidRow(
-            column(6, selectizeInput('sort.after', 'Sort by', 
-                                     choices=c('PAM50', 'NMF', 'HER2', 'HER2pam50.HER2amp','ERBB2.CNA', 'HER2pos.HER2amp', 'TP53', 'PIK3CA'), 
-                                     selected='PAM50', multiple=TRUE)),
-            column(6, radioButtons('sort.dir', '', choices=c('ascending', 'descending'), selected='ascending'))
+            column(12, selectizeInput('sort.after', 'Sort by', 
+                                     choices=names(columns.to.sort), 
+                                     selected=names(columns.to.sort)[1], multiple=FALSE))#,
+            #column(6, radioButtons('sort.dir', '', choices=c('ascending', 'descending'), selected='ascending'))
             
         ),
           
         HTML('<br><br>'),
           
         ## download buttons
-        # fluidRow(
-        #     column(6, downloadButton('downloadHM', 'Download pdf')),
-        #     column(6, downloadButton('downloadTab', 'Download Excel'))
-        # ),
-        #   
+        fluidRow(
+             column(6, downloadButton('downloadHM', 'Download PDF')),
+             column(6, downloadButton('downloadTab', 'Download Excel'))
+        ),
+           
         HTML('<br><br>'),
         HTML('<p><b>Getting started</b></p>'),
-        helpText('Enter your gene names of interest (official gene symbols, e.g. PIK3R2) into the text field. You can enter up to 20 genes.')#,
+        helpText(glue("Enter your gene names of interest (official gene symbols, e.g. {GENESSTART[sample(1:length(GENESSTART), 1)]}) into the text field. You can enter up to 20 genes.")),
+        HTML('<p><b>Dataset</b></p>'),
+        HTML('<p>Copy number aberrations are relative to matching normal blood sample and are on log2(CNA)-1 scale. For other data types the heatmap depicts abundances relative to common tumor reference.</p>'),
+        HTML(glue( "<table border-spacing:5px><tr><th>Type</th><th># features</th><th># samples</th></tr>\n
+                   <tr><td>CNA</td><td>{sum(grepl('_CNA', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
+                   <tr><td>mRNA</td><td>{sum(grepl('_RNAseq', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
+                   <tr><td>Protein</td><td>{sum(grepl('_Protein', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
+                   <tr><td>phosphosites </td><td>{sum(grepl('_pSTY', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
+                   <tr><td>acetylsites</td><td>{sum(grepl('_acK', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
+                   </table>"))
+        
+        #HTML('<p>For more details please see our publication <a href="http://cancerres.aacrjournals.org/content/78/10/2732" target="_blank_">Mundt <i>et al.</i> Cancer Research. 2018</a></p>')
+        
         #HTML('<p>For more details please see our publication <a href="http://cancerres.aacrjournals.org/content/78/10/2732" target="_blank_">Mundt <i>et al.</i> Cancer Research. 2018</a></p>')
         
         )
     })
+    
+    
     
     ##############################
     ## update list of input genes
@@ -89,8 +111,6 @@ shinyServer( function(input, output, session) {
       
       if(is.null(input$genes)) return()
       if(!global$auth) return()
-      
-      #cat('TEST2', input$genes, '\n')
       
       global$genes.input <- extractGenes(input$genes)
     })
@@ -101,45 +121,55 @@ shinyServer( function(input, output, session) {
     ## generate the heatmap
     output$plot <- renderPlot({
       
+      validate(need(global$auth, message = '' ,label = 'auth_plot'))
+      validate(need(!is.null(input$genes), message = 'Nothing to show' ,label = 'no-genes-entered'))
+      
+      
       if(!global$auth) return()
       if(is.null(input$genes)) return()
-      
-      #cat('TTT', input$genes)
       
       genes.vec <- extractGenes( input$genes )
       
       if(length(genes.vec)==0) return()
       
-      hm=makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=input$zscore, 
-                show.sites=input$allsites, min.val=input$min.val, max.val=input$max.val,
-                anno.class=input$sort.after, sort.dir=input$sort.dir)
-      global$expr.select <- hm
+     hm=makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, 
+               row.anno=row.anno, zscore=input$zscore, show.sites=input$allsites, 
+               min.val=as.numeric(input$min.val), 
+               max.val=as.numeric(input$max.val), 
+               anno.class=columns.to.sort[input$sort.after], 
+               sort.dir=global$sort.dir)
+     
+     global$expr.select <- hm
     },
     width = function(){ width=1400},
     height= function(){ height=ifelse( global$auth, 
                                        dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes ), input$allsites) ), 
-                                                       length(unique(extractGenes( input$genes ))) ), 0 )}
+                                                       length(unique(extractGenes( input$genes ))) ), 100 )}
     )
     
     #############################
     ## download heatmap
     output$downloadHM <- downloadHandler(
-
-        ##filename = paste( FILENAMESTRING, ifelse(input$zscore, 'Zscore', ''),'.pdf', sep=''),
-        filename = paste( FILENAMESTRING,'.pdf', sep=''),
+        filename =  function(){paste(FILENAMESTRING,  '-',  gsub(' |\\:','-', Sys.time()), '.pdf', sep='')},
         content = function(file){
-            genes.vec <- extractGenes( input$genes )
-            if(length(genes.vec)==0) return()
-            hm=makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, filename=file, main=TITLESTRING, height=ifelse(length(genes.vec) < 4, 6.5, NA), as.logical(input$zscore))
-            }
-    )
+          genes.vec <- extractGenes( input$genes )
+          if(length(genes.vec)==0) return()
+          #debug(makeHM)
+          #pdf(file, width=20, height=1.5*length(genes.vec))
+          pdf(file, width=1400/72, height=dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes ), input$allsites) ), 
+                                                          length(genes.vec))/72 )
+          hm=try(makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=input$zscore, show.sites=input$allsites, min.val=as.numeric(input$min.val), max.val=as.numeric(input$max.val),anno.class=columns.to.sort[input$sort.after], sort.dir=global$sort.dir, filename = file))
+          dev.off()
+          }
+     )      
+    
     #############################
     ## download Excel
     output$downloadTab <- downloadHandler(
-        filename = function(){paste(FILENAMESTRING, '.xlsx', sep='')},
+        filename = function(){paste( FILENAMESTRING, '-',  gsub(' |\\:','-', Sys.time()) ,'.xlsx', sep='')},
         content = function(file){
             tab=as.data.frame(global$expr.select)
-            WriteXLS('tab', ExcelFileName=file, SheetNames=FILENAMESTRING, FreezeCol=6, FreezeRow=5, row.names=T)
+            WriteXLS('tab', ExcelFileName=file, SheetNames=FILENAMESTRING, FreezeCol=4, FreezeRow=10, row.names=T)
             }
     )
 })
