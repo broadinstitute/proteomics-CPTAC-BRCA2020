@@ -16,8 +16,8 @@ shinyServer( function(input, output, session) {
     global <- reactiveValues(
       zscore='row',
       sort.dir='ascending',
-      auth=F,
-      init=T,
+      auth=T,
+      init=F,
       all.genes=unique(row.anno[, GENE.COLUMN])
       
     )

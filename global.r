@@ -56,21 +56,31 @@ anno.all <- c('PAM50'='PAM50',
               'HER2.Amplified'='HER2.Amplified', 
               'PAM50.Her2.HER2.status'='PAM50.Her2.HER2.status', 
               'TP53.mutation.status'='TP53.mutation.status', 
-              'PIK3CA.mutation.status'='PIK3CA.mutation.status')
+              'PIK3CA.mutation.status'='PIK3CA.mutation.status',
+              'ESTIMATE.ImmuneScore'='ESTIMATE.ImmuneScore',
+              'ESTIMATE.StromalScore'='ESTIMATE.StromalScore')
 
 ##############################
 ## color mappings for 'anno.all'
 column.anno.col <- list(
-    PAM50=c(Basal='red', Her2='violet', LumA='blue', LumB='cyan', 'Normal-like'='grey'),
+    PAM50=c(Basal='#EE2025', Her2='#F9BFCB', LumA='#3953A5', LumB='#ADDAE8', 'Normal-like'='#166534'),
     ER=c(positive='black', negative='white', unknown='grey'),
     PR=c(positive='black', negative='white', unknown='grey'),
     ERBB2.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
     TOP2A.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
-    Multi.Omic.Subtype=c(C1='cyan', C2='red', C3='blue', C4='violet'),
+    Multi.Omic.Subtype=c(C1='#ADDAE8', C2='#EE2025', C3='#3953A5', C4='#F9BFCB'),
     TP53.mutation.status=c('1'='darkblue', '0'='white'),
     PIK3CA.mutation.status=c('1'='darkblue', '0'='white'),
     HER2.Amplified=c('0'='white', '1'='darkgreen'),
-    PAM50.Her2.HER2.status=c(positive='darkgreen', negative='lightgreen')
+    PAM50.Her2.HER2.status=c(positive='darkgreen', negative='lightgreen', 'NA'='white'),
+    ESTIMATE.ImmuneScore=circlize::colorRamp2( c(-677, 1211, 2810), 
+                                               c(rgb(255,245,240, maxColorValue = 255),  
+                                                 rgb(251,106,74, maxColorValue = 255),  
+                                                 rgb(165,21,22, maxColorValue = 255))),
+    ESTIMATE.StromalScore=circlize::colorRamp2( c(-1441, 325, 1591), 
+                                                c(rgb(247,252,245, maxColorValue = 255),  
+                                                  rgb(116,196,118, maxColorValue = 255),  
+                                                  rgb(0,109,44, maxColorValue = 255)))
 )
 
 #############################
@@ -108,6 +118,7 @@ MyComplexHeatmap <- function(m, rdesc, cdesc, cdesc.color, max.val, column2sort)
   
   #########################################
   ## annotations
+ # View(cdesc)
   cdesc.ha <- HeatmapAnnotation(df=cdesc, col=cdesc.color,
                                 
                                 show_legend = T, show_annotation_name = T, 
@@ -125,14 +136,7 @@ MyComplexHeatmap <- function(m, rdesc, cdesc, cdesc.color, max.val, column2sort)
   ## determine height
   n.entries <- nrow(m)
   n.genes <- length(unique(rdesc$geneSymbol))
-    # if(nn == 1) nn.fac <- 5
-  # if(nn == 2) nn.fac <- 4
-  # if(nn == 3) nn.fac <- 2.5
-  # if(nn == 4) nn.fac <- 1.5
-  # if(nn == 5) nn.fac <- 1
-  # if(nn > 5) nn.fac <- 0.6
-  # 
-  #cat('hm height:', nn.fac*nrow(m), '\n')
+
   cat('hm height:', dynamicHeightHM(n.entries, n.genes), '\n')
   
   hm <- Heatmap(m, col=col.hm,
@@ -142,7 +146,8 @@ MyComplexHeatmap <- function(m, rdesc, cdesc, cdesc.color, max.val, column2sort)
                 
                 top_annotation = cdesc.ha,
                 
-                split = rdesc$geneSymbol, 
+                row_split = rdesc$geneSymbol, 
+                row_title_rot=0,
                 column_split=column2sort,
                 
                 name='relative abundance',
@@ -150,8 +155,9 @@ MyComplexHeatmap <- function(m, rdesc, cdesc, cdesc.color, max.val, column2sort)
                 show_column_names = F,
                 #use_raster = FALSE,
                 
-                heatmap_height = unit( dynamicHeightHM(n.entries, n.genes)-50 ,'points')
-               # heatmap_height=unit(  nn.fac*nrow(m), 'cm'  )
+                height = unit(0.5 ,'cm') * n.entries
+                #heatmap_height = unit( dynamicHeightHM(n.entries, n.genes) ,'points')
+                #heatmap_height = unit( dynamicHeightHM(n.entries, n.genes)-50 ,'points')
                   )
   ## plot
   draw(hm, annotation_legend_side='bottom')
@@ -197,8 +203,13 @@ extractGenes <- function(genes.char){
 dynamicHeightHM <- function(n.entries, n.genes){
   
   #height = (n.entries+2)*11 + (n.genes-1)*GAPSIZEROW + 140
-  #height = (n.entries)*20
-  height = (n.entries+3)*13 + (n.genes-1)*GAPSIZEROW + 140
+  #height = (n.entries+4)*15 + (n.genes-1)*GAPSIZEROW + 200
+  
+  height <- 0.3937*n.entries + 0.7423 ## height in inch
+  #height <- 5*n.entries + 18.85
+  height <- height + 12*0.3937 + 0.7423            ## add annotation tracks
+  height <- height * 48             ## inch  to pixel
+  
   
   return(height)
 }
@@ -388,18 +399,15 @@ makeHM <- function(gene, filename=NA, expr=tab.expr.all,
 
     ###############################
     ## heatmap
-    #View(row.anno.select)
-    #MyComplexHeatmap <- function(m, cdesc, cdesc.color, class.variable, variable.other, max.val)
+    column2sort <- column.anno[, anno.class]
+    if(mode(column.anno.col[[anno.class]]) == 'function')
+      column2sort  <- NULL
+    
     MyComplexHeatmap(expr.select.zscore, row.anno.select, column.anno.fig, column.anno.col, 
-                     max.val=max.val, column2sort= column.anno[, anno.class]
+                     max.val=max.val, column2sort=column2sort
                      )
     
-  # pheatmap(expr.select.zscore, cluster_row=F, cluster_col=F,  annotation_col=column.anno.fig, annotation_colors=column.anno.col,  
-  #           scale = "none", labels_row=featureIDs.anno.select, border_color=color.border, gaps_col=gaps.column, 
-  #           gaps_row=gaps.row, color=color.hm, cellwidth=cellwidth, cellheight=cellheight, 
-  #           labels_col=sampleIDs, breaks=color.breaks, legend_breaks=legend_breaks, legend_labels=legend_labels, na_col='white', filename=filename, ...)
 
-  
     #########################################################################################
     ##
     ## - return part of table that is shown in the heatmap and that can be downloaded
