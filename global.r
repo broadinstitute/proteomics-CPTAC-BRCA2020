@@ -26,14 +26,14 @@ p_load(glue)
 
 
 ## import the data
-load('data/data-brca2019-v5.0.Rdata')
+load('data/data-brca2019-v5.2.Rdata')
 
 ## global parameters
 GENE.COLUMN <<- 'geneSymbol' 
 DATATYPE.COLUMN <<- 'DataType'
 
 GENEMAX <<- 20
-TITLESTRING <<- 'CPTAC prospective BRCA v5.0'
+TITLESTRING <<- 'CPTAC prospective BRCA v5.2'
 WINDOWTITLE <<- 'CPTAC-BRCA2019'
 GAPSIZEROW <<- 20
 FILENAMESTRING <<- 'CPTAC-BRCA2019'
@@ -54,9 +54,16 @@ anno.all <- c('PAM50'='PAM50',
               'ERBB2.Proteogenomic.Status'='ERBB2.Proteogenomic.Status', 
               'TOP2A.Proteogenomic.Status'='TOP2A.Proteogenomic.Status', 
               'HER2.Amplified'='HER2.Amplified', 
-              'PAM50.Her2.HER2.status'='PAM50.Her2.HER2.status', 
+              'PAM50.Her2.HER2.status'='PAM50.Her2.HER2.status',
+              'NMF.Her2.HER2.status'='NMF.Her2.HER2.status',
+              
               'TP53.mutation.status'='TP53.mutation.status', 
               'PIK3CA.mutation.status'='PIK3CA.mutation.status',
+              'GATA3.mutation.status'='GATA3.mutation.status', 
+              #'SF3B1.mutation.status'='SF3B1.mutation.status', 
+              #'CBFB.mutation.status'='CBFB.mutation.status', 
+              #'ARID1A.mutation.status'='ARID1A.mutation.status', 
+              
               'ESTIMATE.ImmuneScore'='ESTIMATE.ImmuneScore',
               'ESTIMATE.StromalScore'='ESTIMATE.StromalScore')
 
@@ -68,11 +75,18 @@ column.anno.col <- list(
     PR=c(positive='black', negative='white', unknown='grey'),
     ERBB2.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
     TOP2A.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
-    Multi.Omic.Subtype=c(C1='#ADDAE8', C2='#EE2025', C3='#3953A5', C4='#F9BFCB'),
+    Multi.Omic.Subtype=c(C1='#ADDAE8', C4='#EE2025', C3='#3953A5', C2='#F9BFCB'),
+    
     TP53.mutation.status=c('1'='darkblue', '0'='white'),
     PIK3CA.mutation.status=c('1'='darkblue', '0'='white'),
+    GATA3.mutation.status=c('1'='darkblue', '0'='white'),
+    SF3B1.mutation.status=c('1'='darkblue', '0'='white'),
+    CBFB.mutation.status=c('1'='darkblue', '0'='white'),
+    ARID1A.mutation.status=c('1'='darkblue', '0'='white'),
+    
     HER2.Amplified=c('0'='white', '1'='darkgreen'),
     PAM50.Her2.HER2.status=c(positive='darkgreen', negative='lightgreen', 'NA'='white'),
+    NMF.Her2.HER2.status=c(positive='darkgreen', negative='lightgreen', 'NA'='white'),
     ESTIMATE.ImmuneScore=circlize::colorRamp2( c(-677, 1211, 2810), 
                                                c(rgb(255,245,240, maxColorValue = 255),  
                                                  rgb(251,106,74, maxColorValue = 255),  
