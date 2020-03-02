@@ -40,11 +40,7 @@ shinyServer( function(input, output, session) {
       global$auth <- authenticateUser(input$passphrase)
       global$init <- F
     })
-    # 
-    # observeEvent(input$zscore, {
-    #   global$score <- input$zscore
-    # })
-    # 
+
     ##############################
     ## ui
     ##############################
@@ -141,7 +137,7 @@ shinyServer( function(input, output, session) {
      
      global$expr.select <- hm
     },
-    width = function(){ width=1400},
+    width = function(){ width=1500},
     height= function(){ height=ifelse( global$auth, 
                                        dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes ), input$allsites) ), 
                                                        length(unique(extractGenes( input$genes ))) ), 100 )}
@@ -156,7 +152,7 @@ shinyServer( function(input, output, session) {
           if(length(genes.vec)==0) return()
           #debug(makeHM)
           #pdf(file, width=20, height=1.5*length(genes.vec))
-          pdf(file, width=1400/72, height=dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes ), input$allsites) ), 
+          pdf(file, width=1500/72, height=dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes ), input$allsites) ), 
                                                           length(genes.vec))/72 )
           hm=try(makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=input$zscore, show.sites=input$allsites, min.val=as.numeric(input$min.val), max.val=as.numeric(input$max.val),anno.class=columns.to.sort[input$sort.after], sort.dir=global$sort.dir, filename = file))
           dev.off()

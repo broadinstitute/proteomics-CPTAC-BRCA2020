@@ -26,17 +26,17 @@ p_load(glue)
 
 
 ## import the data
-load('data/data-brca2019-v5.2.Rdata')
+load('data/data-brca2020-v5.4-public.Rdata')
 
 ## global parameters
 GENE.COLUMN <<- 'geneSymbol' 
 DATATYPE.COLUMN <<- 'DataType'
 
 GENEMAX <<- 20
-TITLESTRING <<- 'CPTAC prospective BRCA v5.2'
-WINDOWTITLE <<- 'CPTAC-BRCA2019'
+TITLESTRING <<- 'CPTAC prospective BRCA v5.4-public'
+WINDOWTITLE <<- 'CPTAC-BRCA2020'
 GAPSIZEROW <<- 20
-FILENAMESTRING <<- 'CPTAC-BRCA2019'
+FILENAMESTRING <<- 'CPTAC-BRCA2020'
 
 cellwidth <<- 8
 cellheight <<- 10
@@ -48,53 +48,66 @@ GENESSTART <<- c('TP53', 'ERBB2', 'PIK3CA', 'GATA3', 'ESR1', 'PGR')
 ##########################################
 ## annotaion tracks shown in heatmap 
 anno.all <- c('PAM50'='PAM50', 
-              'Multi.Omic.Subtype'='NMF.cluster', 
-              'ER'='ER', 
-              'PR'='PR',
+              'NMF.Cluster'='NMF.Cluster', 
+              'ER.Updated.Clinical.Status'='ER.Updated.Clinical.Status', 
+              'PR.Clinical.Status'='PR.Clinical.Status',
               'ERBB2.Proteogenomic.Status'='ERBB2.Proteogenomic.Status', 
               'TOP2A.Proteogenomic.Status'='TOP2A.Proteogenomic.Status', 
-              'HER2.Amplified'='HER2.Amplified', 
-              'PAM50.Her2.HER2.status'='PAM50.Her2.HER2.status',
-              'NMF.Her2.HER2.status'='NMF.Her2.HER2.status',
+              'ERBB2.Gene.Amplified'='ERBB2.Gene.Amplified', 
+              #'PAM50.Her2.HER2.status'='PAM50.Her2.HER2.status',
+              #'NMF.Her2.HER2.status'='NMF.Her2.HER2.status',
               
-              'TP53.mutation.status'='TP53.mutation.status', 
-              'PIK3CA.mutation.status'='PIK3CA.mutation.status',
-              'GATA3.mutation.status'='GATA3.mutation.status', 
+              'TP53.mutation'='TP53.Mutation.Status', 
+              'PIK3CA.mutation'='PIK3CA.Mutation.Status',
+              'GATA3.mutation'='GATA3.Mutation.Status', 
               #'SF3B1.mutation.status'='SF3B1.mutation.status', 
               #'CBFB.mutation.status'='CBFB.mutation.status', 
               #'ARID1A.mutation.status'='ARID1A.mutation.status', 
               
-              'ESTIMATE.ImmuneScore'='ESTIMATE.ImmuneScore',
-              'ESTIMATE.StromalScore'='ESTIMATE.StromalScore')
-
+              #'ESTIMATE.Immune.Score'='ESTIMATE.Immune.Score',
+              #'ESTIMATE.Stromal.Score'='ESTIMATE.Stromal.Score')
+              
+              'CIBERSORT.Absolute.Score'='CIBERSORT.Absolute.Score',
+              'xCell.Stromal.Score'='xCell.Stromal.Score')
+              
 ##############################
 ## color mappings for 'anno.all'
 column.anno.col <- list(
     PAM50=c(Basal='#EE2025', Her2='#F9BFCB', LumA='#3953A5', LumB='#ADDAE8', 'Normal-like'='#166534'),
-    ER=c(positive='black', negative='white', unknown='grey'),
-    PR=c(positive='black', negative='white', unknown='grey'),
+    ER.Updated.Clinical.Status=c(positive='black', negative='white', unknown='grey'),
+    PR.Clinical.Status=c(positive='black', negative='white', unknown='grey'),
     ERBB2.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
     TOP2A.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
-    Multi.Omic.Subtype=c(C1='#ADDAE8', C4='#EE2025', C3='#3953A5', C2='#F9BFCB'),
     
-    TP53.mutation.status=c('1'='darkblue', '0'='white'),
-    PIK3CA.mutation.status=c('1'='darkblue', '0'='white'),
-    GATA3.mutation.status=c('1'='darkblue', '0'='white'),
-    SF3B1.mutation.status=c('1'='darkblue', '0'='white'),
-    CBFB.mutation.status=c('1'='darkblue', '0'='white'),
-    ARID1A.mutation.status=c('1'='darkblue', '0'='white'),
+    #NMF.cluster=c(C1='#ADDAE8', C4='#EE2025', C3='#3953A5', C2='#F9BFCB'),
+    NMF.Cluster=c('LumB-I'='#ADDAE8', 'Basal-I'='#EE2025', 'LumA-I'='#3953A5', 'HER2-I'='#F9BFCB'),
     
-    HER2.Amplified=c('0'='white', '1'='darkgreen'),
-    PAM50.Her2.HER2.status=c(positive='darkgreen', negative='lightgreen', 'NA'='white'),
-    NMF.Her2.HER2.status=c(positive='darkgreen', negative='lightgreen', 'NA'='white'),
-    ESTIMATE.ImmuneScore=circlize::colorRamp2( c(-677, 1211, 2810), 
+    TP53.mutation=c('1'='darkblue', '0'='white'),
+    PIK3CA.mutation=c('1'='darkblue', '0'='white'),
+    GATA3.mutation=c('1'='darkblue', '0'='white'),
+    SF3B1.mutation=c('1'='darkblue', '0'='white'),
+    CBFB.mutation=c('1'='darkblue', '0'='white'),
+    ARID1A.mutation=c('1'='darkblue', '0'='white'),
+    
+    ERBB2.Gene.Amplified=c('0'='white', '1'='darkgreen'),
+    
+    CIBERSORT.Absolute.Score=circlize::colorRamp2( c(0.1, 0.9, 2.1), 
                                                c(rgb(255,245,240, maxColorValue = 255),  
                                                  rgb(251,106,74, maxColorValue = 255),  
                                                  rgb(165,21,22, maxColorValue = 255))),
-    ESTIMATE.StromalScore=circlize::colorRamp2( c(-1441, 325, 1591), 
+    xCell.Stromal.Score=circlize::colorRamp2( c(0, 0.042, 0.36), 
                                                 c(rgb(247,252,245, maxColorValue = 255),  
                                                   rgb(116,196,118, maxColorValue = 255),  
                                                   rgb(0,109,44, maxColorValue = 255)))
+    
+    #ESTIMATE.Immune.Score=circlize::colorRamp2( c(-677, 1211, 2810), 
+    #                                           c(rgb(255,245,240, maxColorValue = 255),  
+    #                                             rgb(251,106,74, maxColorValue = 255),  
+    #                                             rgb(165,21,22, maxColorValue = 255))),
+    #ESTIMATE.Stromal.Score=circlize::colorRamp2( c(-1441, 325, 1591), 
+    #                                            c(rgb(247,252,245, maxColorValue = 255),  
+    #                                              rgb(116,196,118, maxColorValue = 255),  
+    #                                              rgb(0,109,44, maxColorValue = 255)))
 )
 
 #############################
@@ -106,7 +119,7 @@ columns.to.sort <- anno.all
 ## 21060613 bcrypt
 authenticateUser <- function(passphrase){
   if(nchar(as.character(passphrase)) > 0){
-    return(checkpw(as.character(passphrase), "$2a$12$9MiaCkRCE65f6HRE3tCaYuWS5m2amHyluHXlEM.ZepiYPqq9LZU2q"))
+    return(checkpw(as.character(passphrase), "$2a$12$Y4f36MFCqkGd/ilZw4qPcu8tPbPU/EwyaIWEu2oMaxQGUC7.nX53y"))
   } else {
     return(FALSE)
   }
