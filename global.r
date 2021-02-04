@@ -20,9 +20,7 @@ p_load(gplots)
 p_load(WriteXLS)
 p_load(grid)
 p_load(bcrypt)
-#p_load(knitr)
 p_load(glue)
-#source('pheatmap.r')
 
 
 ## import the data
@@ -42,11 +40,11 @@ cellwidth <<- 8
 cellheight <<- 10
 
 ################################################
-## 
+## default gene names
 GENESSTART <<- c('TP53', 'ERBB2', 'PIK3CA', 'GATA3', 'ESR1', 'PGR')
 
 ##########################################
-## annotaion tracks shown in heatmap 
+## annotation tracks shown in heatmap 
 anno.all <- c('PAM50'='PAM50', 
               'NMF.Cluster'='NMF.Cluster', 
               'ER.Updated.Clinical.Status'='ER.Updated.Clinical.Status', 
@@ -54,23 +52,15 @@ anno.all <- c('PAM50'='PAM50',
               'ERBB2.Proteogenomic.Status'='ERBB2.Proteogenomic.Status', 
               'TOP2A.Proteogenomic.Status'='TOP2A.Proteogenomic.Status', 
               'ERBB2.Gene.Amplified'='ERBB2.Gene.Amplified', 
-              #'PAM50.Her2.HER2.status'='PAM50.Her2.HER2.status',
-              #'NMF.Her2.HER2.status'='NMF.Her2.HER2.status',
               
               'TP53.mutation'='TP53.Mutation.Status', 
               'PIK3CA.mutation'='PIK3CA.Mutation.Status',
               'GATA3.mutation'='GATA3.Mutation.Status', 
-              #'SF3B1.mutation.status'='SF3B1.mutation.status', 
-              #'CBFB.mutation.status'='CBFB.mutation.status', 
-              #'ARID1A.mutation.status'='ARID1A.mutation.status', 
-              
-              #'ESTIMATE.Immune.Score'='ESTIMATE.Immune.Score',
-              #'ESTIMATE.Stromal.Score'='ESTIMATE.Stromal.Score')
-              
+            
               'CIBERSORT.Absolute.Score'='CIBERSORT.Absolute.Score',
               'xCell.Stromal.Score'='xCell.Stromal.Score')
               
-##############################
+###############################
 ## color mappings for 'anno.all'
 column.anno.col <- list(
     PAM50=c(Basal='#EE2025', Her2='#F9BFCB', LumA='#3953A5', LumB='#ADDAE8', 'Normal-like'='#166534'),
@@ -79,7 +69,6 @@ column.anno.col <- list(
     ERBB2.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
     TOP2A.Proteogenomic.Status=c(positive='black', negative='white', unknown='grey'),
     
-    #NMF.cluster=c(C1='#ADDAE8', C4='#EE2025', C3='#3953A5', C2='#F9BFCB'),
     NMF.Cluster=c('LumB-I'='#ADDAE8', 'Basal-I'='#EE2025', 'LumA-I'='#3953A5', 'HER2-I'='#F9BFCB'),
     
     TP53.mutation=c('1'='darkblue', '0'='white'),
@@ -99,15 +88,6 @@ column.anno.col <- list(
                                                 c(rgb(247,252,245, maxColorValue = 255),  
                                                   rgb(116,196,118, maxColorValue = 255),  
                                                   rgb(0,109,44, maxColorValue = 255)))
-    
-    #ESTIMATE.Immune.Score=circlize::colorRamp2( c(-677, 1211, 2810), 
-    #                                           c(rgb(255,245,240, maxColorValue = 255),  
-    #                                             rgb(251,106,74, maxColorValue = 255),  
-    #                                             rgb(165,21,22, maxColorValue = 255))),
-    #ESTIMATE.Stromal.Score=circlize::colorRamp2( c(-1441, 325, 1591), 
-    #                                            c(rgb(247,252,245, maxColorValue = 255),  
-    #                                              rgb(116,196,118, maxColorValue = 255),  
-    #                                              rgb(0,109,44, maxColorValue = 255)))
 )
 
 #############################
@@ -116,7 +96,7 @@ columns.to.sort <- anno.all
 
 
 ##################################################################
-## 21060613 bcrypt
+## bcrypt: disabled
 authenticateUser <- function(passphrase){
   if(nchar(as.character(passphrase)) > 0){
     return(checkpw(as.character(passphrase), "$2a$12$Y4f36MFCqkGd/ilZw4qPcu8tPbPU/EwyaIWEu2oMaxQGUC7.nX53y"))
