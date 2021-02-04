@@ -2,7 +2,7 @@
 ## Filename: global.r
 ## Created: Oct 24, 2019
 ## Author(s): Karsten Krug
-## Purpose: Shiny-app to visualize data from CPTAC LUAD discovery cohort
+## Purpose: Shiny-app to visualize data from CPTAC prospective BRCA cohort
 ## This file imports the underlying data and contains global functions
 ## and variables used by 'ui.R' and 'server.R'
 #################################################################

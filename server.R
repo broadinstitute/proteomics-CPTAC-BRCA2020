@@ -2,7 +2,7 @@
 ## Filename: server.R
 ## Created: Oct 24, 2019
 ## Author(s): Karsten Krug
-## Purpose: Shiny-app to visualize data from CPTAC LUAD discovery cohort
+## Purpose: Shiny-app to visualize data from CPTAC prospective BRCA cohort
 ## This defines the server logic of the Shiny-app.
 ##########################################################################
 library(shiny)
