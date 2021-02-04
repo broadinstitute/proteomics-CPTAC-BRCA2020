@@ -1,0 +1,12 @@
+name: cptac-brca2020
+title: CPTAC-BRCA2020
+username: karsten
+account: karsten
+server: shiny-proteomics.broadinstitute.org
+hostUrl: http://shiny-proteomics.broadinstitute.org:3939/__api__
+appId: 14
+bundleId: 43
+url: http://shiny-proteomics.broadinstitute.org:3939/content/14/
+when: 1604589289.10334
+asMultiple: FALSE
+asStatic: FALSE
