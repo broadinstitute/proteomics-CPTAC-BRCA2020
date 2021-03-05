@@ -29,7 +29,6 @@ shinyServer( function(input, output, session) {
       if(global$auth) return()
       list(
         passwordInput('passphrase',label='Enter password', width=120, placeholder = 'Password'),
-        #passwordInput('authbutton',label='Enter password', width=120, placeholder = 'Password')
         actionButton('authbutton', 'GO', )
       )
     })
@@ -90,11 +89,9 @@ shinyServer( function(input, output, session) {
                    <tr><td>Protein</td><td>{sum(grepl('_Protein', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
                    <tr><td>phosphosites </td><td>{sum(grepl('_pSTY', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
                    <tr><td>acetylsites</td><td>{sum(grepl('_acK', row.anno$DataType))}</td><td>{ncol(tab.expr.all)}</td></tr>\n
-                   </table>"))
+                   </table>")),
         
-        #HTML('<p>For more details please see our publication <a href="http://cancerres.aacrjournals.org/content/78/10/2732" target="_blank_">Mundt <i>et al.</i> Cancer Research. 2018</a></p>')
-        
-        #HTML('<p>For more details please see our publication <a href="http://cancerres.aacrjournals.org/content/78/10/2732" target="_blank_">Mundt <i>et al.</i> Cancer Research. 2018</a></p>')
+        HTML('<br><p>For more details please see our publication <a href="https://www.cell.com/cell/fulltext/S0092-8674(20)31400-8" target="_blank_">Krug <i>et al.</i> Cell, 2020</a></p>')
         
         )
     })
@@ -150,11 +147,13 @@ shinyServer( function(input, output, session) {
         content = function(file){
           genes.vec <- extractGenes( input$genes )
           if(length(genes.vec)==0) return()
-          #debug(makeHM)
-          #pdf(file, width=20, height=1.5*length(genes.vec))
+
           pdf(file, width=1500/72, height=dynamicHeightHM(length( findGenesInDataset(extractGenes( input$genes ), input$allsites) ), 
                                                           length(genes.vec))/72 )
-          hm=try(makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, zscore=input$zscore, show.sites=input$allsites, min.val=as.numeric(input$min.val), max.val=as.numeric(input$max.val),anno.class=columns.to.sort[input$sort.after], sort.dir=global$sort.dir, filename = file))
+          hm=try(makeHM(genes.vec, expr=tab.expr.all, column.anno=column.anno, row.anno=row.anno, 
+                        zscore=input$zscore, show.sites=input$allsites, 
+                        min.val=as.numeric(input$min.val), max.val=as.numeric(input$max.val), 
+                        anno.class=columns.to.sort[input$sort.after], sort.dir=global$sort.dir, filename = file, main = TITLESTRING.HEATMAP))
           dev.off()
           }
      )      
